@@ -12,7 +12,7 @@ if freeworker fails for a question the line is written with sql=null and the que
 import argparse, json, os, re, sqlite3, subprocess, sys, time
 from concurrent.futures import ThreadPoolExecutor
 HERE = os.path.dirname(os.path.abspath(__file__))
-FREEWORKER = os.path.expanduser("~/.agents/skills/free-first/freeworker.py")
+FREEWORKER = os.environ.get("SQL_LLM_SCRIPT", os.path.expanduser("~/.agents/skills/free-first/freeworker.py"))  # any script that takes a prompt and prints SQL
 sys.path.insert(0, HERE)
 from eval import load_golden
 
