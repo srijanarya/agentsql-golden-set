@@ -1,0 +1,879 @@
+# Golden question set. JSON syntax (valid YAML 1.2) so it parses with the stdlib. As-of date for relative questions: 2026-10-15.
+{
+ "as_of": "2026-10-15",
+ "database": "data/sample.db",
+ "questions": [
+  {
+   "id": "Q01",
+   "difficulty": "easy",
+   "question": "How many active (not soft-deleted) customers do we have?",
+   "trap": "soft-deleted rows",
+   "ordered": false,
+   "abs_tol": 0.01,
+   "expected_sql": "SELECT COUNT(*) FROM customers WHERE is_deleted = 0",
+   "verification": {
+    "check_sql": "SELECT COUNT(*) FROM (SELECT customer_id FROM customers EXCEPT SELECT customer_id FROM customers WHERE is_deleted <> 0)",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      35
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      35
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q02",
+   "difficulty": "easy",
+   "question": "How many completed orders are there, excluding soft-deleted orders?",
+   "trap": "status + soft-delete",
+   "ordered": false,
+   "abs_tol": 0.01,
+   "expected_sql": "SELECT COUNT(*) FROM orders o WHERE o.status = 'completed' AND o.is_deleted = 0",
+   "verification": {
+    "check_sql": "SELECT SUM(CASE WHEN status = 'completed' AND is_deleted = 0 THEN 1 ELSE 0 END) FROM orders",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      291
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      291
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q03",
+   "difficulty": "easy",
+   "question": "How many active (not soft-deleted) products are there in each category?",
+   "trap": "soft-deleted product",
+   "ordered": false,
+   "abs_tol": 0.01,
+   "expected_sql": "SELECT category, COUNT(*) AS n FROM products WHERE is_deleted = 0 GROUP BY category",
+   "verification": {
+    "check_sql": "SELECT category, SUM(1 - is_deleted) FROM products GROUP BY category HAVING SUM(1 - is_deleted) > 0",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      "Consumables",
+      2
+     ],
+     [
+      "Hardware",
+      4
+     ],
+     [
+      "Services",
+      3
+     ],
+     [
+      "Software",
+      2
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      "Consumables",
+      2
+     ],
+     [
+      "Hardware",
+      4
+     ],
+     [
+      "Services",
+      3
+     ],
+     [
+      "Software",
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q04",
+   "difficulty": "easy",
+   "question": "Among active customers, how many distinct customers (count customers, not names) have placed at least one completed, non-deleted order?",
+   "trap": "duplicate customer names: count ids, not names",
+   "ordered": false,
+   "abs_tol": 0.01,
+   "expected_sql": "SELECT COUNT(DISTINCT o.customer_id) FROM orders o JOIN customers c ON c.customer_id = o.customer_id WHERE c.is_deleted = 0 AND o.status = 'completed' AND o.is_deleted = 0",
+   "verification": {
+    "check_sql": "SELECT COUNT(*) FROM customers c WHERE c.is_deleted = 0 AND EXISTS (SELECT 1 FROM orders o WHERE o.customer_id = c.customer_id AND o.status = 'completed' AND o.is_deleted = 0)",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      35
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      35
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q05",
+   "difficulty": "easy",
+   "question": "How many active customers have no region assigned?",
+   "trap": "NULL foreign key",
+   "ordered": false,
+   "abs_tol": 0.01,
+   "expected_sql": "SELECT COUNT(*) FROM customers WHERE region_id IS NULL AND is_deleted = 0",
+   "verification": {
+    "check_sql": "SELECT COUNT(*) FROM customers c LEFT JOIN regions r ON r.region_id = c.region_id WHERE r.region_id IS NULL AND c.is_deleted = 0",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      2
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q06",
+   "difficulty": "easy",
+   "question": "List the SKUs of active products in the Hardware category.",
+   "trap": "soft-deleted product",
+   "ordered": false,
+   "abs_tol": 0.01,
+   "expected_sql": "SELECT sku FROM products WHERE category = 'Hardware' AND is_deleted = 0",
+   "verification": {
+    "check_sql": "SELECT p.sku FROM products p WHERE p.is_deleted = 0 AND p.category IN ('Hardware')",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      "SKU-100"
+     ],
+     [
+      "SKU-101"
+     ],
+     [
+      "SKU-102"
+     ],
+     [
+      "SKU-109"
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      "SKU-100"
+     ],
+     [
+      "SKU-101"
+     ],
+     [
+      "SKU-102"
+     ],
+     [
+      "SKU-109"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q07",
+   "difficulty": "medium",
+   "question": "Assume today is 2026-10-15. What was the gross invoiced amount last quarter? Count invoices dated in that calendar quarter, excluding void invoices and invoices belonging to cancelled or soft-deleted orders.",
+   "trap": "relative date ('last quarter') pinned to as-of; void/cancelled/deleted exclusions; quarter boundary",
+   "ordered": false,
+   "abs_tol": 0.01,
+   "expected_sql": "SELECT ROUND(SUM(i.amount), 2) FROM invoices i JOIN orders o ON o.order_id = i.order_id WHERE i.status <> 'void' AND o.status = 'completed' AND o.is_deleted = 0 AND i.invoice_date >= '2026-07-01' AND i.invoice_date < '2026-10-01'",
+   "verification": {
+    "check_sql": "SELECT ROUND(SUM(amount), 2) FROM invoices WHERE status != 'void' AND invoice_date BETWEEN '2026-07-01' AND '2026-09-30' AND order_id IN (SELECT order_id FROM orders WHERE status = 'completed' AND is_deleted = 0)",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      2195127.5
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      2195127.5
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q08",
+   "difficulty": "medium",
+   "question": "What was the net cash collected in September 2026 (payments minus refunds), using India time (IST, UTC+05:30) for the payment date? Payment timestamps are stored in UTC. Sum all payment rows, with no filtering on orders or customers.",
+   "trap": "timezone edge; refunds are negative rows",
+   "ordered": false,
+   "abs_tol": 0.01,
+   "expected_sql": "SELECT ROUND(SUM(amount), 2) FROM payments WHERE datetime(paid_at_utc, '+330 minutes') >= '2026-09-01 00:00:00' AND datetime(paid_at_utc, '+330 minutes') < '2026-10-01 00:00:00'",
+   "verification": {
+    "check_sql": "SELECT ROUND(SUM(amount), 2) FROM payments WHERE strftime('%Y-%m', datetime(paid_at_utc, '+5 hours', '+30 minutes')) = '2026-09'",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      498640.0
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      498640.0
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q09",
+   "difficulty": "medium",
+   "question": "What is the total amount refunded to customers across all time, as a positive number? (Refunds are negative payment rows.)",
+   "trap": "negative amounts",
+   "ordered": false,
+   "abs_tol": 0.01,
+   "expected_sql": "SELECT ROUND(-SUM(amount), 2) FROM payments WHERE amount < 0",
+   "verification": {
+    "check_sql": "SELECT ROUND(ABS(SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END)), 2) FROM payments",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      596575.0
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      596575.0
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q10",
+   "difficulty": "medium",
+   "question": "Which active customers are tied for the most completed (non-deleted) orders? Return customer_id and the order count for every customer tied for first.",
+   "trap": "top-N with ties (LIMIT 1 is wrong)",
+   "ordered": false,
+   "abs_tol": 0.01,
+   "expected_sql": "WITH n AS (SELECT o.customer_id, COUNT(*) AS cnt FROM orders o JOIN customers c ON c.customer_id = o.customer_id WHERE c.is_deleted = 0 AND o.status = 'completed' AND o.is_deleted = 0 GROUP BY o.customer_id) SELECT customer_id, cnt FROM n WHERE cnt = (SELECT MAX(cnt) FROM n)",
+   "verification": {
+    "check_sql": "SELECT customer_id, cnt FROM (SELECT o.customer_id, COUNT(*) AS cnt, RANK() OVER (ORDER BY COUNT(*) DESC) AS rk FROM orders o WHERE o.status = 'completed' AND o.is_deleted = 0 AND o.customer_id IN (SELECT customer_id FROM customers WHERE is_deleted = 0) GROUP BY o.customer_id) WHERE rk = 1",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      8,
+      15
+     ],
+     [
+      7,
+      15
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      7,
+      15
+     ],
+     [
+      8,
+      15
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q11",
+   "difficulty": "medium",
+   "question": "Assume today is 2026-10-15. What is the average order value over completed, non-deleted orders dated in the 90 days ending 2026-10-15 inclusive? Order value = sum of quantity * unit_price * (1 - discount_pct/100) over its lines; a NULL discount means no discount. Round to 2 decimals.",
+   "trap": "NULL discount; 90-day window arithmetic; per-order not per-line average",
+   "ordered": false,
+   "abs_tol": 0.01,
+   "expected_sql": "WITH v AS (SELECT o.order_id, SUM(i.quantity * i.unit_price * (1 - COALESCE(i.discount_pct, 0) / 100.0)) AS val FROM orders o JOIN order_items i ON i.order_id = o.order_id WHERE o.status = 'completed' AND o.is_deleted = 0 AND o.order_date BETWEEN date('2026-10-15', '-89 days') AND '2026-10-15' GROUP BY o.order_id) SELECT ROUND(AVG(val), 2) FROM v",
+   "verification": {
+    "check_sql": "SELECT ROUND(SUM(i.quantity * i.unit_price * (100 - IFNULL(i.discount_pct, 0)) / 100.0) / COUNT(DISTINCT o.order_id), 2) FROM orders o JOIN order_items i USING (order_id) WHERE o.status = 'completed' AND o.is_deleted = 0 AND o.order_date >= '2026-07-18' AND o.order_date <= '2026-10-15'",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      26672.89
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      26672.89
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q12",
+   "difficulty": "medium",
+   "question": "What was the total invoiced amount per month for June, July and August 2026 (by invoice date; exclude void invoices and invoices on cancelled or soft-deleted orders)? Return month as YYYY-MM and total, ordered by month.",
+   "trap": "month boundaries; ordered output",
+   "ordered": true,
+   "abs_tol": 0.01,
+   "expected_sql": "SELECT strftime('%Y-%m', i.invoice_date) AS month, ROUND(SUM(i.amount), 2) AS total FROM invoices i JOIN orders o ON o.order_id = i.order_id WHERE i.status <> 'void' AND o.status = 'completed' AND o.is_deleted = 0 AND i.invoice_date >= '2026-06-01' AND i.invoice_date < '2026-09-01' GROUP BY month ORDER BY month",
+   "verification": {
+    "check_sql": "SELECT substr(invoice_date, 1, 7), ROUND(SUM(amount), 2) FROM invoices WHERE order_id IN (SELECT order_id FROM orders WHERE status = 'completed' AND is_deleted = 0) AND status IN ('issued', 'paid') AND substr(invoice_date, 1, 7) IN ('2026-06', '2026-07', '2026-08') GROUP BY 1 ORDER BY 1",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      "2026-06",
+      752667.5
+     ],
+     [
+      "2026-07",
+      679140.0
+     ],
+     [
+      "2026-08",
+      571207.5
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      "2026-06",
+      752667.5
+     ],
+     [
+      "2026-07",
+      679140.0
+     ],
+     [
+      "2026-08",
+      571207.5
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q13",
+   "difficulty": "medium",
+   "question": "For Q2 2026 (April-June, by invoice date), what share of non-void invoices on completed, non-deleted orders have status 'paid'? Return a ratio between 0 and 1 rounded to 4 decimals.",
+   "trap": "ratio; integer-division pitfall; void exclusion",
+   "ordered": false,
+   "abs_tol": 0.0001,
+   "expected_sql": "SELECT ROUND(1.0 * SUM(CASE WHEN i.status = 'paid' THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 4) FROM invoices i JOIN orders o ON o.order_id = i.order_id WHERE i.status <> 'void' AND o.status = 'completed' AND o.is_deleted = 0 AND i.invoice_date >= '2026-04-01' AND i.invoice_date < '2026-07-01'",
+   "verification": {
+    "check_sql": "SELECT ROUND(CAST((SELECT COUNT(*) FROM invoices i WHERE i.status = 'paid' AND i.invoice_date BETWEEN '2026-04-01' AND '2026-06-30' AND i.order_id IN (SELECT order_id FROM orders WHERE status = 'completed' AND is_deleted = 0)) AS REAL) / (SELECT COUNT(*) FROM invoices i WHERE i.status IN ('issued', 'paid') AND i.invoice_date BETWEEN '2026-04-01' AND '2026-06-30' AND i.order_id IN (SELECT order_id FROM orders WHERE status = 'completed' AND is_deleted = 0)), 4)",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      0.7255
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      0.7255
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q14",
+   "difficulty": "medium",
+   "question": "How many non-deleted orders (any status) are dated on each of 2026-06-30 and 2026-07-01? Return the date and the count.",
+   "trap": "quarter boundary dates",
+   "ordered": false,
+   "abs_tol": 0.01,
+   "expected_sql": "SELECT order_date, COUNT(*) AS n FROM orders WHERE is_deleted = 0 AND order_date IN ('2026-06-30', '2026-07-01') GROUP BY order_date",
+   "verification": {
+    "check_sql": "SELECT d.order_date, (SELECT COUNT(*) FROM orders o WHERE o.order_date = d.order_date AND o.is_deleted = 0) FROM (SELECT '2026-06-30' AS order_date UNION ALL SELECT '2026-07-01') d",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      "2026-06-30",
+      2
+     ],
+     [
+      "2026-07-01",
+      3
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      "2026-06-30",
+      2
+     ],
+     [
+      "2026-07-01",
+      3
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q15",
+   "difficulty": "medium",
+   "question": "Which customer names are shared by more than one active customer? Return the name and the number of active customers with that name.",
+   "trap": "soft-deleted duplicate must not count (Iyer Retail)",
+   "ordered": false,
+   "abs_tol": 0.01,
+   "expected_sql": "SELECT name, COUNT(*) AS n FROM customers WHERE is_deleted = 0 GROUP BY name HAVING COUNT(*) > 1",
+   "verification": {
+    "check_sql": "SELECT a.name, COUNT(*) FROM customers a WHERE a.is_deleted = 0 AND EXISTS (SELECT 1 FROM customers b WHERE b.name = a.name AND b.is_deleted = 0 AND b.customer_id <> a.customer_id) GROUP BY a.name",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      "Patel Wholesale",
+      2
+     ],
+     [
+      "Gupta Distributors",
+      2
+     ],
+     [
+      "Sharma Traders",
+      2
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      "Gupta Distributors",
+      2
+     ],
+     [
+      "Patel Wholesale",
+      2
+     ],
+     [
+      "Sharma Traders",
+      2
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q16",
+   "difficulty": "hard",
+   "question": "For each region, what is the refund ratio: total refunds (as a positive number) divided by total positive payments received, considering active customers and completed non-deleted orders only? Return region name and the ratio rounded to 4 decimals; list every region, and return NULL where the region has no payments.",
+   "trap": "divide-by-zero (Jaipur never pays); LEFT JOINs keep empty regions; refunds as negatives",
+   "ordered": false,
+   "abs_tol": 0.0001,
+   "expected_sql": "SELECT r.name, ROUND(COALESCE(-SUM(CASE WHEN p.amount < 0 THEN p.amount END), 0) / NULLIF(SUM(CASE WHEN p.amount > 0 THEN p.amount END), 0), 4) AS refund_ratio FROM regions r LEFT JOIN customers c ON c.region_id = r.region_id AND c.is_deleted = 0 LEFT JOIN orders o ON o.customer_id = c.customer_id AND o.status = 'completed' AND o.is_deleted = 0 LEFT JOIN invoices i ON i.order_id = o.order_id LEFT JOIN payments p ON p.invoice_id = i.invoice_id GROUP BY r.region_id, r.name",
+   "verification": {
+    "check_sql": "WITH pay AS (SELECT c.region_id AS rid, SUM(CASE WHEN p.amount > 0 THEN p.amount ELSE 0 END) AS pos, SUM(CASE WHEN p.amount < 0 THEN -p.amount ELSE 0 END) AS neg FROM payments p JOIN invoices i ON i.invoice_id = p.invoice_id JOIN orders o ON o.order_id = i.order_id JOIN customers c ON c.customer_id = o.customer_id WHERE c.is_deleted = 0 AND o.status = 'completed' AND o.is_deleted = 0 GROUP BY c.region_id) SELECT r.name, CASE WHEN pay.pos IS NULL OR pay.pos = 0 THEN NULL ELSE ROUND(pay.neg / pay.pos, 4) END FROM regions r LEFT JOIN pay ON pay.rid = r.region_id",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      "Mumbai",
+      0.1902
+     ],
+     [
+      "Pune",
+      0.0178
+     ],
+     [
+      "Delhi NCR",
+      0.0394
+     ],
+     [
+      "Bengaluru",
+      0.01
+     ],
+     [
+      "Chennai",
+      0.1969
+     ],
+     [
+      "Kolkata",
+      0.0571
+     ],
+     [
+      "Ahmedabad",
+      0.0466
+     ],
+     [
+      "Jaipur",
+      null
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      "Mumbai",
+      0.1902
+     ],
+     [
+      "Pune",
+      0.0178
+     ],
+     [
+      "Delhi NCR",
+      0.0394
+     ],
+     [
+      "Bengaluru",
+      0.01
+     ],
+     [
+      "Chennai",
+      0.1969
+     ],
+     [
+      "Kolkata",
+      0.0571
+     ],
+     [
+      "Ahmedabad",
+      0.0466
+     ],
+     [
+      "Jaipur",
+      null
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q17",
+   "difficulty": "hard",
+   "question": "Top 3 products by units sold in Q3 2026 (orders dated July-September 2026; completed, non-deleted orders; active products only). If several products tie for 3rd place include all of them. Return sku and units, highest units first, ties broken by sku ascending.",
+   "trap": "top-N with ties at the cut-off; soft-deleted product; quarter boundary",
+   "ordered": true,
+   "abs_tol": 0.01,
+   "expected_sql": "WITH u AS (SELECT p.sku, SUM(i.quantity) AS units FROM order_items i JOIN orders o ON o.order_id = i.order_id JOIN products p ON p.product_id = i.product_id WHERE o.status = 'completed' AND o.is_deleted = 0 AND p.is_deleted = 0 AND o.order_date >= '2026-07-01' AND o.order_date < '2026-10-01' GROUP BY p.sku) SELECT sku, units FROM u WHERE units >= (SELECT units FROM u ORDER BY units DESC LIMIT 1 OFFSET 2) ORDER BY units DESC, sku",
+   "verification": {
+    "check_sql": "SELECT sku, units FROM (SELECT p.sku AS sku, SUM(i.quantity) AS units, DENSE_RANK() OVER (ORDER BY SUM(i.quantity) DESC) AS dr, RANK() OVER (ORDER BY SUM(i.quantity) DESC) AS rk FROM products p JOIN order_items i ON i.product_id = p.product_id JOIN orders o ON o.order_id = i.order_id WHERE p.is_deleted = 0 AND o.status = 'completed' AND o.is_deleted = 0 AND o.order_date BETWEEN '2026-07-01' AND '2026-09-30' GROUP BY p.sku) WHERE rk <= 3 ORDER BY units DESC, sku",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      "SKU-103",
+      63
+     ],
+     [
+      "SKU-106",
+      54
+     ],
+     [
+      "SKU-104",
+      43
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      "SKU-103",
+      63
+     ],
+     [
+      "SKU-106",
+      54
+     ],
+     [
+      "SKU-104",
+      43
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q18",
+   "difficulty": "hard",
+   "question": "Assume today is 2026-10-15. Which active customers have not placed a completed, non-deleted order in more than 120 days (their most recent such order is dated before 2026-06-17)? Return customer_id and last_order_date, ordered by last_order_date then customer_id. Customers with no orders are excluded.",
+   "trap": "relative date pinned to as-of; MAX not latest-row; customers without orders",
+   "ordered": true,
+   "abs_tol": 0.01,
+   "expected_sql": "SELECT o.customer_id, MAX(o.order_date) AS last_order_date FROM orders o JOIN customers c ON c.customer_id = o.customer_id WHERE c.is_deleted = 0 AND o.status = 'completed' AND o.is_deleted = 0 GROUP BY o.customer_id HAVING MAX(o.order_date) < date('2026-10-15', '-120 days') ORDER BY last_order_date, o.customer_id",
+   "verification": {
+    "check_sql": "SELECT customer_id, last_d FROM (SELECT customer_id, (SELECT MAX(order_date) FROM orders x WHERE x.customer_id = c.customer_id AND x.status = 'completed' AND x.is_deleted = 0) AS last_d FROM customers c WHERE c.is_deleted = 0) WHERE last_d IS NOT NULL AND julianday('2026-10-15') - julianday(last_d) > 120 ORDER BY last_d, customer_id",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      5,
+      "2026-04-23"
+     ],
+     [
+      27,
+      "2026-05-18"
+     ],
+     [
+      35,
+      "2026-06-09"
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      5,
+      "2026-04-23"
+     ],
+     [
+      27,
+      "2026-05-18"
+     ],
+     [
+      35,
+      "2026-06-09"
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q19",
+   "difficulty": "hard",
+   "question": "What was the month-over-month growth in net cash collected (payments minus refunds, IST dates, summing all payment rows with no filtering on orders or customers) from August 2026 to September 2026, i.e. (September - August) / August, rounded to 4 decimals?",
+   "trap": "timezone edge payments straddle both month boundaries in IST; refunds",
+   "ordered": false,
+   "abs_tol": 0.0001,
+   "expected_sql": "WITH m AS (SELECT strftime('%Y-%m', datetime(paid_at_utc, '+330 minutes')) AS ym, SUM(amount) AS net FROM payments GROUP BY ym) SELECT ROUND((SELECT net FROM m WHERE ym = '2026-09') * 1.0 / (SELECT net FROM m WHERE ym = '2026-08') - 1, 4)",
+   "verification": {
+    "check_sql": "SELECT ROUND((SUM(CASE WHEN datetime(paid_at_utc, '+330 minutes') >= '2026-09-01' AND datetime(paid_at_utc, '+330 minutes') < '2026-10-01' THEN amount END) - SUM(CASE WHEN datetime(paid_at_utc, '+330 minutes') >= '2026-08-01' AND datetime(paid_at_utc, '+330 minutes') < '2026-09-01' THEN amount END)) / SUM(CASE WHEN datetime(paid_at_utc, '+330 minutes') >= '2026-08-01' AND datetime(paid_at_utc, '+330 minutes') < '2026-09-01' THEN amount END), 4) FROM payments",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      0.7781
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      0.7781
+     ]
+    ]
+   }
+  },
+  {
+   "id": "Q20",
+   "difficulty": "hard",
+   "question": "For each active customer who has received at least one refund, what is their net amount collected (all payments minus refunds) on invoices of non-deleted orders? Return customer_id and net amount, highest net first, ties broken by customer_id ascending.",
+   "trap": "soft-deleted orders still have payment rows; refunds net against payments",
+   "ordered": true,
+   "abs_tol": 0.01,
+   "expected_sql": "SELECT c.customer_id, ROUND(SUM(p.amount), 2) AS net FROM customers c JOIN orders o ON o.customer_id = c.customer_id AND o.is_deleted = 0 JOIN invoices i ON i.order_id = o.order_id JOIN payments p ON p.invoice_id = i.invoice_id WHERE c.is_deleted = 0 GROUP BY c.customer_id HAVING SUM(CASE WHEN p.amount < 0 THEN 1 ELSE 0 END) > 0 ORDER BY net DESC, c.customer_id",
+   "verification": {
+    "check_sql": "SELECT cid, ROUND(net, 2) FROM (SELECT o.customer_id AS cid, SUM(p.amount) AS net, MIN(p.amount) AS worst FROM payments p, invoices i, orders o WHERE p.invoice_id = i.invoice_id AND i.order_id = o.order_id AND o.is_deleted = 0 AND o.customer_id NOT IN (SELECT customer_id FROM customers WHERE is_deleted = 1) GROUP BY o.customer_id) WHERE worst < 0 ORDER BY net DESC, cid",
+    "check_sql_agrees": true,
+    "python_recomputation": "agrees",
+    "python_result": [
+     [
+      7,
+      481452.5
+     ],
+     [
+      36,
+      345035.0
+     ],
+     [
+      27,
+      324710.0
+     ],
+     [
+      18,
+      317807.5
+     ],
+     [
+      30,
+      252457.5
+     ],
+     [
+      33,
+      189150.0
+     ],
+     [
+      15,
+      172005.0
+     ],
+     [
+      12,
+      159425.0
+     ],
+     [
+      3,
+      147965.0
+     ],
+     [
+      4,
+      138530.0
+     ],
+     [
+      26,
+      126147.5
+     ],
+     [
+      29,
+      119367.5
+     ],
+     [
+      25,
+      118300.0
+     ],
+     [
+      17,
+      115175.0
+     ],
+     [
+      23,
+      91245.0
+     ],
+     [
+      5,
+      64362.5
+     ],
+     [
+      11,
+      50590.0
+     ],
+     [
+      9,
+      44625.0
+     ]
+    ]
+   },
+   "expected_result": {
+    "columns_note": "compared by position, not name",
+    "rows": [
+     [
+      7,
+      481452.5
+     ],
+     [
+      36,
+      345035.0
+     ],
+     [
+      27,
+      324710.0
+     ],
+     [
+      18,
+      317807.5
+     ],
+     [
+      30,
+      252457.5
+     ],
+     [
+      33,
+      189150.0
+     ],
+     [
+      15,
+      172005.0
+     ],
+     [
+      12,
+      159425.0
+     ],
+     [
+      3,
+      147965.0
+     ],
+     [
+      4,
+      138530.0
+     ],
+     [
+      26,
+      126147.5
+     ],
+     [
+      29,
+      119367.5
+     ],
+     [
+      25,
+      118300.0
+     ],
+     [
+      17,
+      115175.0
+     ],
+     [
+      23,
+      91245.0
+     ],
+     [
+      5,
+      64362.5
+     ],
+     [
+      11,
+      50590.0
+     ],
+     [
+      9,
+      44625.0
+     ]
+    ]
+   }
+  }
+ ]
+}
